@@ -1,8 +1,11 @@
 const fs = require('fs');
 const { config, normalize } = require('@geolonia/normalize-japanese-addresses');
 
+// Get the local file path to the Japanese Addresses API from the environment variable
+const japaneseAddressesApi = process.env.geolonia_api;
+
 // Set the local file path to the Japanese Addresses API
-config.japaneseAddressesApi = 'file:///Users/jamestodd/Desktop/Work/Keiji/JapanVisit_Oct23/ChochoMoves/normalize-japanese-addresses/japanese-addresses-master/api/ja';
+config.japaneseAddressesApi = `file://${japaneseAddressesApi}`;
 
 // Parse command-line arguments
 const args = process.argv.slice(2); // Skip the first two arguments (node executable and script filename)
