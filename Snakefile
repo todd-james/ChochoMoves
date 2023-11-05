@@ -13,6 +13,8 @@ envvars:
 
 # Paramters 
 years_prefectures = [f"{x.split('/')[9]}_{x.split('/')[11].replace('.txt', '')}" for x in glob.glob(f"{os.environ['rawdata_path']}/*/new/*.txt")]
+years = list(set([f"{x.split('/')[9]}" for x in glob.glob(f"{os.environ['rawdata_path']}/*/new/*.txt")]))
+prefectures = list(set([f"{x.split('/')[11].replace('.txt', '')}" for x in glob.glob(f"{os.environ['rawdata_path']}/*/new/*.txt")]))
 
 # Rules 
 rule all: 
@@ -28,28 +30,53 @@ rule clean_input:
     shell: 
         "python {input} {output}"
 
+# Generate rules for each prefecture
+for prefecture in prefectures:
+    rule: 
+        name: 
+            f"deduplicate_within_prefecture_{prefecture}"
+        input: 
+            expand(f"{os.environ['cleandata_path']}/InputAddresses_Clean/{{year}}_{prefecture}.txt", year=years)
+        output: 
+            f"{os.environ['cleandata_path']}/DeduplicatedWithinPrefecture/{prefecture}.txt"
+        shell: 
+            "python deduplicate_within_prefecture.py {output} {input}"
+            
 rule geocode_address: 
     input: 
         "geolonia_addrgeocode.js", 
-        f"{os.environ['cleandata_path']}/InputAddresses_Clean/{{year}}_{{prefecture}}.txt"
+        f"{os.environ['cleandata_path']}/DeduplicatedWithinPrefecture/{{prefecture}}.txt"
     output:
-        f"{os.environ['cleandata_path']}/GeocodedAddresses/{{year}}_{{prefecture}}.csv"
+        f"{os.environ['cleandata_path']}/GeocodedAddresses/{{prefecture}}.csv"
     shell: 
         "node {input} {output}"
 
-# Probably need some rule here to reformat geocoded addresses back onto the raw data with names/numbers 
-# Also need to consider how we might try rectify those that were unsuccessful (level 1 or 2) by modifying the addresses
-# Finally need to assign chocho using point in polygon on the coordinates 
+rule assign_geocode_outputs: 
+    input: 
+        "results_to_raw.py", 
+        f"{os.environ['rawdata_path']}/{{year}}/new/{{prefecture}}.txt",
+        f"{os.environ['cleandata_path']}/GeocodedAddresses/{{prefecture}}.csv"
+    output: 
+        f"{os.environ['cleandata_path']}/GeocodedAddresses/{{year}}_{{prefecture}}.csv"
+    shell: 
+        "python {input} {output}"
 
-# rule improve_geocoding: 
-
-# rule rerun_geocoding: 
-
-# rule tidy_outputs: 
+# rule split_candidates: 
+#     input: 
+#         "split_candidates.R", 
+#         f"{os.environ['cleandata_path']}/GeocodedAddresses/{{year}}_{{prefecture}}.csv", 
+#         f"{os.environ['cleandata_path']}/GeocodedAddresses/{{year+1}}_{{prefecture}}.csv"
+#     output: 
+#         f"{os.environ['cleandata_path']}/GeocodedAddresses/Split/{{year}}_{{prefecture}}_nomove.csv", 
+#         f"{os.environ['cleandata_path']}/GeocodedAddresses/Split/{{year}}_{{prefecture}}_movein.csv", 
+#         f"{os.environ['cleandata_path']}/GeocodedAddresses/Split/{{year}}_{{prefecture}}_moveout.csv"
+#         f"{os.environ['cleandata_path']}/GeocodedAddresses/Split/{{year}}_{{prefecture}}_other.csv"
+#     shell: 
+#         "Rscript {input} {output}"
 
 rule all_geocoded: 
     input: 
-        expand(f"{os.environ['cleandata_path']}/GeocodedAddresses/{{year_prefecture}}.csv", year_prefecture = years_prefectures)
+        expand(f"{os.environ['cleandata_path']}/GeocodedAddresses/Split/{{year_prefecture}}_other.csv", year_prefecture = years_prefectures)
     output:
         "done.txt"
     shell:

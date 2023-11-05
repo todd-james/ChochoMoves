@@ -3,3 +3,16 @@ normalize-japanese-addresses
 .DS_Store
 .env
 .Rhistory
+.snakemake
+InputAddresses_Clean
+GeocodedAddresses
+DeduplicatedWithinPrefecture
+old 
+Report
+Results
+Geocoding_Summary.csv
+GeocodingViz.R
+done.txt
+test.sh
+split_timing.txt
+
